@@ -6,42 +6,29 @@
 
 ;; haskell-pack
 
-(require 'install-packages-pack)
-(install-packages-pack/install-packs '(flymake
-                                       flymake-shell
-                                       haskell-mode
-                                       ghci-completion
-                                       flymake-hlint
-                                       smartscan
-                                       w3m
-                                       shm
-                                       deferred))
-
-(require 'flymake)
-(require 'haskell-mode)
-(require 'deferred)
+(use-package deferred)
 
 ;; utilities
 
-(defun haskell-pack/cabal-installed-p! ()
-  "Determine if cabal is installed on the machine or not."
-  (haskell-pack/command-installed-p! "cabal"))
-
 (defun haskell-pack/command-installed-p! (package)
   "Determine if PACKAGE is installed on the machine."
-  (zerop (shell-command (format "export PATH=$PATH:~/.cabal/bin; which %s" package))))
+  (zerop (shell-command (format "export PATH=~/.local/bin/:$PATH; which %s" package))))
 
-(defun haskell-pack/cabal-install-package (cabal-package)
-  "Install CABAL-PACKAGE (if not already installed) through cabal (if cabal is installed)."
-  (lexical-let ((package cabal-package))
-    (when (and (haskell-pack/cabal-installed-p!) (not (haskell-pack/command-installed-p! package)))
+(defun haskell-pack/cabal-installed-p! ()
+  "Determine if cabal is installed on the machine or not."
+  (haskell-pack/command-installed-p! "stack"))
+
+(defun haskell-pack/install-hs-package (hs-package)
+  "Install HS-PACKAGE if needs be and if possible."
+  (lexical-let ((package hs-package))
+    (when (and (haskell-pack/cabal-installed-p!) (not (haskell-pack/command-installed-p! hs-package)))
       (deferred:$
-        (deferred:process "cabal" "install" package)
+        (deferred:process "stack" "install" package)
         (deferred:nextc it
           (lambda (x)
             (message "Package '%s' is%s installed!" package (if (haskell-pack/command-installed-p! package) "" " still not"))))))))
 
-(defun haskell-pack/cabal-install-packages (packages)
+(defun haskell-pack/install-hs-packages (packages)
   "Trigger cabal install of PACKAGES."
   (mapc 'haskell-pack/cabal-install-package packages))
 
